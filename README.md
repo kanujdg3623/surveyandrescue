@@ -15,4 +15,4 @@ roslaunch survey_and_rescue position_hold.py
 
 Task 3.2
 
-roslaunch survey_and_rescue record_rosbag.launch
+roslaunch survey_and_rescue record_rosbag.launch duration:=240
