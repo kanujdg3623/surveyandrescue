@@ -41,7 +41,7 @@ class Edrone():
 		self.drone_position = [0.0,0.0,0.0]	
 
 		# [x_setpoint, y_setpoint, z_setpoint]
-		with open("/home/kdg/cell_coords.json","r") as read_file:
+		with open("/home/"+pc_username+"/catkin_ws/src/survey_and_rescue/scripts/cell_coords.json","r") as read_file:
 			data=json.load(read_file)
 		self.setpoint=[]
 		for i in ('A','B','C','D','E','F'):
