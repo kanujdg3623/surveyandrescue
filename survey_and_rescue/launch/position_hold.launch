@@ -1,0 +1,4 @@
+<launch>
+	<node name="edroneclient" type="edroneclient" pkg="edrone_client"/>
+  <node name="drone_control" type="position_hold.py" pkg="survey_and_rescue" output="screen" />
+</launch>
