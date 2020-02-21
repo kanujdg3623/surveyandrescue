@@ -58,10 +58,10 @@ class sr_scheduler():
 				cell=chr(ord(j)/10+64)+str(ord(j)%10)
 				try:
 					if self.beacons[cell][0]!=self.info[i]:
-						self.beacons[cell]=[self.info[i],math.floor(time()-self.time)]
+						self.beacons[cell]=[self.info[i],time()-self.time]
 						self.detection_callback([cell,self.info[i]])
 				except KeyError:
-					self.beacons[cell]=[self.info[i],math.floor(time()-self.time)]
+					self.beacons[cell]=[self.info[i],time()-self.time]
 					self.detection_callback([cell,self.info[i]])
 					self.stat=True
 					
@@ -81,7 +81,7 @@ def main(args):
 				continue
 			col=ord(location[0])-64
 			row=int(location[1])
-			timespent=(time()-sched.time-info[1])+0.001
+			timespent=(time()-sched.time-info[1])+0.000001
 			dist=math.sqrt( (cur_row-row)**2 + (cur_col-col)**2 )
 			if info[0]=="FOOD" and timespent<=25:
 				if priority < (10 * sched.food / (dist*timespent)):

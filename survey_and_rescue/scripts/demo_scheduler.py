@@ -23,6 +23,7 @@ class sr_scheduler():
 		self.decided_msg.location=self.decided_msg_prev.location"D3"
 		self.decided_msg.info=self.decided_msg_prev.info"BASE"
 		self.beacons={}
+		self.actual_beacons={}
 		self.servicing=False
 		self.info=["FOOD","MEDICINE","RESCUE"]
 		self.time=time()
@@ -31,12 +32,12 @@ class sr_scheduler():
 		self.stat=False
 		
 	def detection_callback(self, msg):
-		self.beacons[msg.location]=msg.info
-		self.stat=True
+		if(actual_beacons[msg.location]==msg.info)
+			self.beacons[msg.location]=[msg.info,time()-self.time]
 	
 	def serviced_callback(self,msg):
 		if msg.location!='D3':
-			self.beacons[msg.location][0]="OFF"
+			self.beacons[msg.location][0]=self.actual_beacons[msg.location]="OFF"
 			self.beacons[msg.location][1]=None
 		if(msg.location==self.decided_msg_prev.location):
 			if self.decided_msg_prev.info=="RESCUE" and msg.info=="SUCCESS":
@@ -53,6 +54,16 @@ class sr_scheduler():
 	def stats_callback(self,msg):
 		self.food=msg.foodOnboard
 		self.medicine=msg.medOnboard
+		lit=[msg.currentLit.FOOD,msg.currentLit.MEDICINE,msg.currentLit.RESCUE]
+		for i in range(3):
+			for j in lit[i]:
+				cell=chr(ord(j)/10+64)+str(ord(j)%10)
+				try:
+					if self.actual_beacons[cell]!=self.info[i]:
+						self.actual_beacons[cell]=self.info[i]
+				except KeyError:
+					self.actual_beacons[cell]=self.info[i]
+					self.stat=True
 					
 def main(args):
 	sched = sr_scheduler()
@@ -70,7 +81,7 @@ def main(args):
 				continue
 			col=ord(location[0])-64
 			row=int(location[1])
-			timespent=(time()-sched.time-info[1])+0.001
+			timespent=(time()-sched.time-info[1])+0.000001
 			dist=math.sqrt( (cur_row-row)**2 + (cur_col-col)**2 )
 			if info[0]=="FOOD" and timespent<=25:
 				if priority < (10 * sched.food / (dist*timespent)):
