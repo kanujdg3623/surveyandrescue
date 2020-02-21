@@ -9,7 +9,6 @@ from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from survey_and_rescue.msg import *
 import json
-from rospy_message_converter import message_converter
 from time import time
 import math
 
@@ -21,8 +20,8 @@ class sr_scheduler():
 		self.decision_pub = rospy.Publisher('/decision_info',SRInfo,queue_size=4)
 		self.decided_msg = SRInfo()
 		self.decided_msg_prev=SRInfo()
-		self.decided_msg.location="D3"
-		self.decided_msg.info="BASE"
+		self.decided_msg.location=self.decided_msg_prev.location"D3"
+		self.decided_msg.info=self.decided_msg_prev.info"BASE"
 		self.beacons={}
 		self.servicing=False
 		self.info=["FOOD","MEDICINE","RESCUE"]
@@ -38,11 +37,11 @@ class sr_scheduler():
 		if msg.location!='D3':
 			self.beacons[msg.location][0]="OFF"
 			self.beacons[msg.location][1]=None
-		if(msg.location==self.decided_msg.location):
-			if self.decided_msg.info=="RESCUE" and msg.info=="SUCCESS":
-				self.decided_msg.location="D3"
-				self.decided_msg.info="BASE"
-				self.decision_pub.publish(self.decided_msg)
+		if(msg.location==self.decided_msg_prev.location):
+			if self.decided_msg_prev.info=="RESCUE" and msg.info=="SUCCESS":
+				self.decided_msg_prev.location="D3"
+				self.decided_msg_prev.info="BASE"
+				self.decision_pub.publish(self.decided_msg_prev)
 				self.servicing=True
 			else:
 				self.servicing=False
@@ -74,15 +73,15 @@ def main(args):
 	while not sched.stat:
 		pass
 	while not rospy.is_shutdown():
-		cur_col=ord(sched.decided_msg.location[0])-64
-		cur_row=int(sched.decided_msg.location[1])
+		cur_col=ord(sched.decided_msg_prev.location[0])-64
+		cur_row=int(sched.decided_msg_prev.location[1])
 		priority=0
 		for location,info in sched.beacons.items():
-			if info[0]=="OFF" or location==sched.decided_msg.location:
+			if info[0]=="OFF" or location==sched.decided_msg_prev.location:
 				continue
 			col=ord(location[0])-64
 			row=int(location[1])
-			timespent=(time()-sched.time-info[1])
+			timespent=(time()-sched.time-info[1])+0.001
 			dist=math.sqrt( (cur_row-row)**2 + (cur_col-col)**2 )
 			if info[0]=="FOOD" and timespent<=25:
 				if priority < (10 * sched.food / (dist*timespent)):
@@ -109,14 +108,12 @@ def main(args):
 			sched.decided_msg_prev.location=sched.decided_msg.location
 			sched.decided_msg_prev.info=sched.decided_msg.info
 			sched.servicing=True
-		else sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info not in ["RESCUE","BASE"]:
+		elif sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info not in ["RESCUE","BASE"]:
 			sched.decision_pub.publish(sched.decided_msg)
 			sched.decided_msg_prev.location=sched.decided_msg.location
 			sched.decided_msg_prev.info=sched.decided_msg.info
 			sched.servicing=True
 		rate.sleep()
 
-self.out=[0,0,0]
-self.Iterm=[0,0,0]
 if __name__ == '__main__':
     main(sys.argv)
