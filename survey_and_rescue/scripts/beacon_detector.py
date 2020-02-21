@@ -27,6 +27,7 @@ class sr_determine_colors():
  		self.color_bound=np.array([[255,0,0],[0,255,0],[0,0,255]])
  		self.info=("MEDICINE","FOOD","RESCUE")
  		self.beacons={}
+		rospy.sleep(2)
  		
 
 	def load_rois(self, file_path = '/home/kdg/rect_info.pkl'):
