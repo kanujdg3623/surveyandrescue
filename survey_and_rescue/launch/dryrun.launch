@@ -17,7 +17,7 @@
 	
 	<node pkg="survey_and_rescue" type="scheduler.py" name="sr_scheduler"  output="screen"/>
 	
-	<node pkg="survey_and_rescue" type="beacon_detector.py" name="sr_beacon_detector"  output="screen"/>
+	<!--<node pkg="survey_and_rescue" type="beacon_detector.py" name="sr_beacon_detector"  output="screen"/>-->
 	
 	<node pkg="survey_and_rescue" type="monitor.pyc" name="monitor" output="screen">
 		<param name="~start_on_base" value="$(arg start_on_base)"/>
