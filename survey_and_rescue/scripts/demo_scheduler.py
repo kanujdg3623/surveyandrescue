@@ -20,8 +20,8 @@ class sr_scheduler():
 		self.decision_pub = rospy.Publisher('/decision_info',SRInfo,queue_size=4)
 		self.decided_msg = SRInfo()
 		self.decided_msg_prev=SRInfo()
-		self.decided_msg.location=self.decided_msg_prev.location"D3"
-		self.decided_msg.info=self.decided_msg_prev.info"BASE"
+		self.decided_msg.location=self.decided_msg_prev.location="D3"
+		self.decided_msg.info=self.decided_msg_prev.info="BASE"
 		self.beacons={}
 		self.actual_beacons={}
 		self.servicing=False
@@ -32,7 +32,7 @@ class sr_scheduler():
 		self.stat=False
 		
 	def detection_callback(self, msg):
-		if(actual_beacons[msg.location]==msg.info)
+		if (actual_beacons[msg.location]==msg.info):
 			self.beacons[msg.location]=[msg.info,time()-self.time]
 	
 	def serviced_callback(self,msg):
@@ -103,16 +103,17 @@ def main(args):
 		if priority==0:
 			sched.decided_msg.location="D3"
 			sched.decided_msg.info="BASE"
-		if not sched.servicing:
+			
+		if not sched.servicing or (sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info in ["FOOD","MEDICINE"] and sched.timer<1.5):
 			sched.decision_pub.publish(sched.decided_msg)
 			sched.decided_msg_prev.location=sched.decided_msg.location
 			sched.decided_msg_prev.info=sched.decided_msg.info
+			sched.timer=0
 			sched.servicing=True
-		elif sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info not in ["RESCUE","BASE"]:
-			sched.decision_pub.publish(sched.decided_msg)
-			sched.decided_msg_prev.location=sched.decided_msg.location
-			sched.decided_msg_prev.info=sched.decided_msg.info
-			sched.servicing=True
+			
+		elif -0.5<=sched.error[0]<=0.5 and -0.5<=sched.error[1]<=0.5 and -1<=sched.error[2]<=1:
+			sched.timer=sched.timer+0.05
+			
 		rate.sleep()
 
 if __name__ == '__main__':

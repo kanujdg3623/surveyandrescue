@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
+from std_msgs.msg import Float64
 from survey_and_rescue.msg import *
 import json
 from time import time
@@ -17,11 +18,15 @@ class sr_scheduler():
 		#rospy.Subscriber('/detection_info',SRInfo,self.detection_callback)	
 		rospy.Subscriber('/serviced_info',SRInfo,self.serviced_callback)
 		rospy.Subscriber('/stats_sr',SRDroneStats,self.stats_callback)
+		rospy.Subscriber('/alt_error', Float64, self.alt_error_callback)
+		rospy.Subscriber('/pitch_error', Float64, self.pitch_error_callback)
+		rospy.Subscriber('/roll_error', Float64, self.roll_error_callback)
+		
 		self.decision_pub = rospy.Publisher('/decision_info',SRInfo,queue_size=4)
 		self.decided_msg = SRInfo()
 		self.decided_msg_prev=SRInfo()
-		self.decided_msg.location=self.decided_msg_prev.location"D3"
-		self.decided_msg.info=self.decided_msg_prev.info"BASE"
+		self.decided_msg.location=self.decided_msg_prev.location="D3"
+		self.decided_msg.info=self.decided_msg_prev.info="BASE"
 		self.beacons={}
 		self.servicing=False
 		self.info=["FOOD","MEDICINE","RESCUE"]
@@ -29,9 +34,20 @@ class sr_scheduler():
 		self.food=0
 		self.medicine=0
 		self.stat=False
+		self.error=[None,None,None]
+		self.timer=0
 		
 	def detection_callback(self, msg):
 		pass
+
+	def alt_error_callback(self,msg):
+		self.error[2]=msg.data
+		
+	def pitch_error_callback(self,msg):
+		self.error[1]=msg.data
+		
+	def roll_error_callback(self,msg):
+		self.error[0]=msg.data
 
 	def serviced_callback(self,msg):
 		if msg.location!='D3':
@@ -42,6 +58,7 @@ class sr_scheduler():
 				self.decided_msg_prev.location="D3"
 				self.decided_msg_prev.info="BASE"
 				self.decision_pub.publish(self.decided_msg_prev)
+				self.timer=0
 				self.servicing=True
 			else:
 				self.servicing=False
@@ -59,17 +76,15 @@ class sr_scheduler():
 				try:
 					if self.beacons[cell][0]!=self.info[i]:
 						self.beacons[cell]=[self.info[i],time()-self.time]
-						self.detection_callback([cell,self.info[i]])
 				except KeyError:
 					self.beacons[cell]=[self.info[i],time()-self.time]
-					self.detection_callback([cell,self.info[i]])
 					self.stat=True
 					
 def main(args):
 	sched = sr_scheduler()
 	rospy.init_node('sr_scheduler', anonymous=False)
 	rospy.on_shutdown(sched.shutdown_hook)	
-	rate = rospy.Rate(30)
+	rate = rospy.Rate(20)
 	while not sched.stat:
 		pass
 	while not rospy.is_shutdown():
@@ -103,16 +118,17 @@ def main(args):
 		if priority==0:
 			sched.decided_msg.location="D3"
 			sched.decided_msg.info="BASE"
-		if not sched.servicing:
+			
+		if not sched.servicing or (sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info in ["FOOD","MEDICINE"] and sched.timer<1.5):
 			sched.decision_pub.publish(sched.decided_msg)
 			sched.decided_msg_prev.location=sched.decided_msg.location
 			sched.decided_msg_prev.info=sched.decided_msg.info
+			sched.timer=0
 			sched.servicing=True
-		elif sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info not in ["RESCUE","BASE"]:
-			sched.decision_pub.publish(sched.decided_msg)
-			sched.decided_msg_prev.location=sched.decided_msg.location
-			sched.decided_msg_prev.info=sched.decided_msg.info
-			sched.servicing=True
+			
+		elif -0.5<=sched.error[0]<=0.5 and -0.5<=sched.error[1]<=0.5 and -1<=sched.error[2]<=1:
+			sched.timer=sched.timer+0.05
+			
 		rate.sleep()
 
 if __name__ == '__main__':

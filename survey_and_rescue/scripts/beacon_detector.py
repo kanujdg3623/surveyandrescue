@@ -27,7 +27,7 @@ class sr_determine_colors():
  		self.color_bound=np.array([[255,0,0],[0,255,0],[0,0,255]])
  		self.info=("MEDICINE","FOOD","RESCUE")
  		self.beacons={}
-		rospy.sleep(2)
+ 		rospy.sleep(2)
  		
 
 	def load_rois(self, file_path = '/home/kdg/rect_info.pkl'):
@@ -78,7 +78,7 @@ def main(args):
 	try:
 		rospy.init_node('sr_beacon_detector', anonymous=False)
 		s = sr_determine_colors()
-		rate = rospy.Rate(30)
+		rate = rospy.Rate(20)
 		s.load_rois()
 		while s.img is None:
 			pass

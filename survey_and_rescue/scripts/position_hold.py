@@ -136,12 +136,12 @@ class Edrone():
 			self.Iterm[i] = self.Iterm[i] + self.error[i]
 			
 			if self.error[i]*(self.prev_value[i]-self.setpoint[i])<=0:
-				if i<2
+				if i<2:
 					self.Iterm[i]=0
-				elif self.Dterm[2]<0:
+				elif self.Dterm[2]<=0:
 					self.Iterm[2]=10
 				else:
-					self.Iterm[2]=-10
+					self.Iterm[2]=0
 			self.out[i] = self.Pterm[i] * self.Kp[i] + self.Iterm[i] * self.Ki[i] + self.Dterm[i] * self.Kd[i]		
 
 			self.prev_value[i]=self.drone_position[i]
