@@ -128,6 +128,8 @@ def main(args):
 			
 		elif -0.5<=sched.error[0]<=0.5 and -0.5<=sched.error[1]<=0.5 and -1<=sched.error[2]<=1:
 			sched.timer=sched.timer+0.05
+			sys.stdout.flush()
+			sys.stdout.write("Hovering at "+sched.decided_msg_prev.location+" for "+str(sched.timer) )
 			
 		rate.sleep()
 
