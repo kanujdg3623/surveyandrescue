@@ -119,12 +119,11 @@ def main(args):
 			sched.decided_msg.location="D3"
 			sched.decided_msg.info="BASE"
 			
-		if not sched.servicing or (sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info in ["FOOD","MEDICINE"] and sched.timer<1.5):
+		if sched.decided_msg.location!=sched.decided_msg_prev.location and ((sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info in ["FOOD","MEDICINE"] and sched.timer<1.5) or (sched.decided_msg_prev.info=="BASE" and not sched.rescue and sched.timer<=2.5)):
 			sched.decision_pub.publish(sched.decided_msg)
 			sched.decided_msg_prev.location=sched.decided_msg.location
 			sched.decided_msg_prev.info=sched.decided_msg.info
 			sched.timer=0
-			sched.servicing=True
 			
 		elif -1<=sched.error[0]<=1 and -1<=sched.error[1]<=1 and -1<=sched.error[2]<=1:
 			sched.timer=sched.timer+0.05
