@@ -33,6 +33,7 @@ class sr_scheduler():
 		self.time=time()
 		self.food=0
 		self.medicine=0
+		self.rescue=False
 		self.stat=False
 		self.error=[None,None,None]
 		self.timer=0
@@ -53,16 +54,15 @@ class sr_scheduler():
 		if msg.location!='D3':
 			self.beacons[msg.location][0]="OFF"
 			self.beacons[msg.location][1]=None
-		if(msg.location==self.decided_msg_prev.location):
-			if self.decided_msg_prev.info=="RESCUE" and msg.info=="SUCCESS":
-				self.decided_msg_prev.location="D3"
-				self.decided_msg_prev.info="BASE"
-				self.decision_pub.publish(self.decided_msg_prev)
-				self.timer=0
-				self.servicing=True
-			else:
-				self.servicing=False
-
+		elif msg.location=='D3' and self.rescue:
+			self.rescue=False
+		elif self.decided_msg_prev.info=="RESCUE" and msg.info=="SUCCESS":
+			self.decided_msg_prev.location="D3"
+			self.decided_msg_prev.info="BASE"
+			self.decision_pub.publish(self.decided_msg_prev)
+			self.timer=0
+			self.rescue=True
+			
 	def shutdown_hook(self):
 		pass
 
@@ -126,10 +126,8 @@ def main(args):
 			sched.timer=0
 			sched.servicing=True
 			
-		elif -0.5<=sched.error[0]<=0.5 and -0.5<=sched.error[1]<=0.5 and -1<=sched.error[2]<=1:
+		elif -1<=sched.error[0]<=1 and -1<=sched.error[1]<=1 and -1<=sched.error[2]<=1:
 			sched.timer=sched.timer+0.05
-			sys.stdout.flush()
-			sys.stdout.write("Hovering at "+sched.decided_msg_prev.location+" for "+str(sched.timer) )
 			
 		rate.sleep()
 
