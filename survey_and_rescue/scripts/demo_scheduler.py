@@ -29,22 +29,25 @@ class sr_scheduler():
 		self.time=time()
 		self.food=0
 		self.medicine=0
+		self.rescue=False
 		self.stat=False
 		
 	def detection_callback(self, msg):
-		if (actual_beacons[msg.location]==msg.info):
-			self.beacons[msg.location]=[msg.info,time()-self.time]
+		self.beacons[msg.location]=[msg.info,time()-self.time]
 	
 	def serviced_callback(self,msg):
 		if msg.location!='D3':
-			self.beacons[msg.location][0]=self.actual_beacons[msg.location]="OFF"
+			self.beacons[msg.location][0]="OFF"
 			self.beacons[msg.location][1]=None
+		elif msg.location == 'D3' and self.rescue:
+			self.rescue=False
 		if(msg.location==self.decided_msg_prev.location):
 			if self.decided_msg_prev.info=="RESCUE" and msg.info=="SUCCESS":
 				self.decided_msg_prev.location="D3"
 				self.decided_msg_prev.info="BASE"
 				self.decision_pub.publish(self.decided_msg_prev)
-				self.servicing=True
+				self.timer=0
+				self.rescue=self.servicing=True
 			else:
 				self.servicing=False
 
@@ -54,16 +57,7 @@ class sr_scheduler():
 	def stats_callback(self,msg):
 		self.food=msg.foodOnboard
 		self.medicine=msg.medOnboard
-		lit=[msg.currentLit.FOOD,msg.currentLit.MEDICINE,msg.currentLit.RESCUE]
-		for i in range(3):
-			for j in lit[i]:
-				cell=chr(ord(j)/10+64)+str(ord(j)%10)
-				try:
-					if self.actual_beacons[cell]!=self.info[i]:
-						self.actual_beacons[cell]=self.info[i]
-				except KeyError:
-					self.actual_beacons[cell]=self.info[i]
-					self.stat=True
+		self.stat=True
 					
 def main(args):
 	sched = sr_scheduler()
@@ -104,16 +98,19 @@ def main(args):
 			sched.decided_msg.location="D3"
 			sched.decided_msg.info="BASE"
 			
-		if not sched.servicing or (sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info in ["FOOD","MEDICINE"] and sched.timer<1.5):
-			sched.decision_pub.publish(sched.decided_msg)
+		if not sched.servicing or (sched.decided_msg.info=="RESCUE" and sched.decided_msg_prev.info in ["FOOD","MEDICINE"] and sched.timer<1.5) or (sched.decided_msg_prev.info=="BASE" and not sched.rescue and sched.decided_msg.info!="BASE" and sched.timer<=2.5) :				
+   			sched.decision_pub.publish(sched.decided_msg)
 			sched.decided_msg_prev.location=sched.decided_msg.location
 			sched.decided_msg_prev.info=sched.decided_msg.info
 			sched.timer=0
 			sched.servicing=True
+			print()
+			print(priority)
 			
-		elif -0.5<=sched.error[0]<=0.5 and -0.5<=sched.error[1]<=0.5 and -1<=sched.error[2]<=1:
+		elif -1<=sched.error[0]<=1 and -1<=sched.error[1]<=1 and -1<=sched.error[2]<=1:
 			sched.timer=sched.timer+0.05
-			
+			#sys.stdout.flush()
+			#sys.stdout.write("Hovering at "+sched.decided_msg_prev.location+" for "+str(sched.timer) )
 		rate.sleep()
 
 if __name__ == '__main__':
