@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 '''
 	* Team ID:		4438
-	* Author List:	Aayushi Gautam, Dikshita Jain, Kanuj Das Gupta, Mohit Soni
+	* Author List:		Aayushi Gautam, Dikshita Jain, Kanuj Das Gupta, Mohit Soni
 	* FileName:		Position_hold.py
 	* Theme:		Survey And Rescue
-	* Functions:	getKey(), disarm(), arm(), land(), whycon_callback(), decision_callback(), pid()
+	* Functions:		getKey(), disarm(), arm(), land(), whycon_callback(), decision_callback(), pid()
 '''
 
 from edrone_client.msg import *
@@ -23,7 +23,7 @@ from survey_and_rescue.msg import *
 
 """
 	Function Name: getKey()
-	Logic: Inbuilt function taken from drone_teleop.py(edrone_client)
+	Logic: Function referenced from drone_teleop.py(edrone_client)
 """
 def getKey():
     tty.setraw(sys.stdin.fileno())
@@ -50,7 +50,7 @@ class Edrone():
 		with open('/home/asus/catkin_ws/src/survey_and_rescue/scripts/cell_coords.json','r') as readfile:
 			self.cell_coords=json.load(readfile)
 		self.setpoint=self.cell_coords.get("E4")
-		self.pid_setpoint=[0,0,0]
+		
 		
 		#Declaring a cmd of message type edrone_msgs and initializing values
 		self.cmd = edrone_msgs()
@@ -63,24 +63,24 @@ class Edrone():
 		self.cmd.rcAUX3 = 1500
 		self.cmd.rcAUX4 = 1500
 		
-		#initial setting of Kp, Kd and ki for [roll, pitch, throttle].
+		#initial setting of Kp, Kd and ki1,ki2 for [roll, pitch, throttle].
 		#=======================#
 		self.Kp = [10,10,50]	#
-		self.Ki1 = [4.5,4.5,2]	#
-		self.Ki2 = [2,2,0.5]	#
+		self.Ki1 = [4.5,4.5,2]	# For error in range [-1.5,1.5]
+		self.Ki2 = [2,2,0.5]	# For error in range )-1.5,1.5(
 		self.Kd = [250,250,250]	#
 		#=======================#
 		
-		self.prev_value=[0,0,0]
+		self.prev_value=[0,0,0]	#previous drone position
 		self.min_values=[1000,1000,1000]
 		self.max_values=[2000,2000,2000]
 		
 		self.error=[0,0,0]
 		self.Pterm=[0,0,0]
 		self.Iterm1=[0,0,0]	#Iterm for error in range -1.5 to +1.5
-		self.Iterm2=[0,0,0] #Iterm for error except the above range
+		self.Iterm2=[0,0,0]	#Iterm for error except the above range
 		self.Dterm=[0,0,0]
-		self.out=[0,0,0]
+		self.out=[0,0,0]	
 
 		# Publishing /drone_command, /alt_error, /pitch_error, /roll_error
 		self.command_pub = rospy.Publisher('/drone_command', edrone_msgs, queue_size=5)
@@ -99,7 +99,7 @@ class Edrone():
 	"""
 	* Function Name: disarm(), arm(), land()
 	* Input: Reference to the object of class edrone
-	* Logic: Setting the values of roll, pitch, throttle in order to arm, disarm and land the drone.
+	* Logic: Setting the values of roll, pitch, throttle in order to arm, disarm or land the drone.
 	"""
 	def disarm(self):
 		self.cmd.rcRoll = 1500
@@ -132,7 +132,7 @@ class Edrone():
 #================================================================================================================
 	"""
 	* Function Name: whycon_callback()
-	* Input: ros msg
+	* Input: ros messages of type PoseArray
 	* Logic: Set the drone position using ros msgs
 	"""
 	def whycon_callback(self,msg):
@@ -141,8 +141,9 @@ class Edrone():
 #================================================================================================================
 	"""
 	* Function Name: decision_callback
-	* Input: ros msg
-	* Logic: Search the value of msg.location in cell_coords.json file and assign it as a set point.
+	* Input: ros msg of type SRInfo
+	* Logic: 	Reset out and Iterms
+			Assign new setpoint from cell coords using msg.location
 	"""
 	def decision_callback(self,msg):
 		self.out=[0,0,0]
@@ -157,13 +158,15 @@ class Edrone():
 	* Input: reference to the object of class edrone
 	* Logic: consists of steps mentioned below
 	 	1. Compute error in each axis.
-		2. Compute the error (for proportional), change in error (for derivative) and sum of errors (for integral) in each axis. Refer "Understanding PID.pdf" to understand PID equation.
-		3. Calculate the pid output required for each axis. 
-		4. Reduce or add this computed output value on the avg value ie 1500.
-		5. Don't run the pid continously. Run the pid only at the a sample time.
-		6. Limit the output value and the final command value between the maximum(2000) and minimum(1000)range before publishing. 
-		7. Update previous errors.
-		8. When the error is changing from positive to negative or vice-versa make Iterm=0.
+	 	2. for roll and pitch we are limiting the error range[-3,3] to control maximum speed of drone.
+		3. Compute the error (for proportional), change in drone position (for derivative) and sum of errors (for integral) in each axis.
+		4. if error is in range [-1.5,1.5] we are using Iterm1 for encapsulating drone in this range otherwise using Iterm2
+		5. when error is changes from positive to negetive or vice versa we are reseting both Iterms to avoid overshoot to some extent.
+		6. Calculate the pid output required for each axis.
+		7. Update previous drone position		
+		8. Limit the output value and the final command value between the maximum(2000) and minimum(1000)range before publishing. 
+		9. Reduce or add this computed output value on the avg value ie 1500.
+		10.Publish to drone_command, alt_error, roll_error and pitch_error
 	'''
 
 
@@ -171,7 +174,6 @@ class Edrone():
 		for i in range(3):
 			self.error[i]=self.drone_position[i]-self.setpoint[i]
 			if i<2:
-				#limiting the error to avoid overshooting(for roll and pitch)
 				self.error[i]=min(3,max(-3,self.error[i])) 
 			
 			self.Pterm[i] = self.error[i]
@@ -181,17 +183,14 @@ class Edrone():
 				
 				if self.error[i]*(self.prev_value[i]-self.setpoint[i])<=0:
 					self.Iterm1[i]=self.Iterm2[i]=0
-	#using two different values of Iterm in order to stabalize the drone in two different error ranges
 				self.out[i]=self.Iterm1[i] = self.Iterm1[i] + self.error[i]
 			
 			else:
 				self.out[i]=self.Iterm2[i] = self.Iterm2[i] + self.error[i]
-			
-			#Final output after applying PID
 			self.out[i] = self.out[i] + self.Pterm[i] * self.Kp[i] + self.Dterm[i] * self.Kd[i]
 
-			self.prev_value[i]=self.drone_position[i] #updating the value of prev_value of drone
-			self.out[i]=min(500,max(-500,self.out[i])) #thresholding the value of output b/w range 1000 to 2000
+			self.prev_value[i]=self.drone_position[i]
+			self.out[i]=min(500,max(-500,self.out[i]))
 		
 		self.cmd.rcRoll, self.cmd.rcPitch, self.cmd.rcThrottle=1500 - self.out[0], 1500 + self.out[1], 1500+self.out[2]
 		self.command_pub.publish(self.cmd)
@@ -202,11 +201,11 @@ class Edrone():
 if __name__ == '__main__':
 	settings = termios.tcgetattr(sys.stdin)
 	e_drone = Edrone()
-	r = rospy.Rate(20)	#specify rate in Hz based upon your desired PID sampling time
+	r = rospy.Rate(20)	#specified rate running pid() for 1/20 seconds of sample time.
 	while not rospy.is_shutdown():
 		e_drone.pid()
 		r.sleep()
-		key = getKey()	#If entered key in terminal is ctrl then land the drone
+		key = getKey()	#If entered key in terminal is ctrl+c breaks the loop and lands and disarms the drone 
 		if key == '\x03':
 			break
 	e_drone.land()
