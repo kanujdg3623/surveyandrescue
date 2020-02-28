@@ -41,25 +41,22 @@ class sr_scheduler():
 		self.decided_msg.location=self.decided_msg_pub.location="E4"            #initializing both msgs location with base location
 		self.decided_msg.info=self.decided_msg_pub.info="BASE"			#initializing both msgs info with "BASE"
 		
-		self.beacons={}								#dictionary that consist of key as beacon location & value as list of msg info whether it is "FOOD" or 
-											#"MEDICINE" OR "RESCUE" AND time stamp with respect to bench mark(self.time) i.e. time period from 
-											#which led configration  starts to glow
+		self.beacons={}								#dictionary that consist of key as beacon location & value as list of msg info whether it is "FOOD" or "MEDICINE" OR "RESCUE" AND time stamp with respect to bench mark(self.time) i.e. time period from which led configration  starts to glow
 											
-		self.servicing=False							#flag variable that stores whether a beacon is currently serviced or not
+		self.servicing=False							#flag variable that stores whether a beacon is currently servicing or not
 		
-		self.time=time()							#bench mark that stores time at start of the run for further time variables
+		self.time=time()							#benchmark time
 		
 		self.food=0								#stores food_on_board & is initially assigned to zero
 		self.medicine=0								#stores med_on_board & is initially assigned to zero
 		
-		self.stat=False								#flag variable of leds status for there start in glow and thus prevents from any drone movement before led lit 
+		self.stat=False								#flag variable that prevents scheduler algorithm till beacons are initially lit
 		
 		self.error=[None,None,None]						#contain error values of roll, pitch and altitude accordingly
 		
 		self.timer=0								#acts as cumulative counter 
 		
-		self.rescue=False							#flag variable to check whether rescue is achieved or not
-
+		self.rescue=False							#flag variable to check whether rescue event is success
 #=========================================================================================================================================================================================================
 
 	'''
@@ -98,14 +95,14 @@ class sr_scheduler():
 	'''
 
 	def serviced_callback(self,msg):
-		if msg.location!='E4':							        #update self.beacons[location] -> info to "OFF"  and error to "None" after it is serviced except "E4"
+		if msg.location!='E4':							        #update self.beacons[location] -> info to "OFF"  and error to "None" after it is serviced, except "E4"
 			self.beacons[msg.location][0]="OFF"
 			self.beacons[msg.location][1]=None
 		elif msg.location == 'E4' and self.rescue:					#else check is made if previous service was rescue and currently drone is on 'E4' and therefore
 			self.rescue=False							#initialize self.rescue to 'False' because now rescue is done
 			
-		if(msg.location==self.decided_msg_pub.location):				#comparing msg being serviced and msg being published
-			if self.decided_msg_pub.info=="RESCUE" and msg.info=="SUCCESS":		#direct drone to base after the rescue is being serviced	
+		if(msg.location==self.decided_msg_pub.location):				#comparing beacon location and msg being published
+			if self.decided_msg_pub.info=="RESCUE" and msg.info=="SUCCESS":		#direct drone to base after the rescue is successful
 				self.decided_msg_pub.location="E4"
 				self.decided_msg_pub.info="BASE"
 				self.decision_pub.publish(self.decided_msg_pub)		 		
@@ -145,7 +142,7 @@ def main(args):
 	while not rospy.is_shutdown():
 		cur_col=ord(sched.decided_msg_pub.location[0])-64			#stores current col value in integer example 'A' as 1	
 		cur_row=int(sched.decided_msg_pub.location[1])				#stores current row value
-		priority=0								#select which cell to service based on distance from current position, marks for service and food or med on board
+		priority=0								#computed for which cell to service based on distance from current position, marks for service and food or med on board
 		for location,info in sched.beacons.items():				
 			if info[0]=="OFF" or location==sched.decided_msg_pub.location:	#if info is off or location is already published go on reading the dictionary	
 				continue
