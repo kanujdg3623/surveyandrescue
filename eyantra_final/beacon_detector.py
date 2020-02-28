@@ -2,10 +2,10 @@
 
 '''
 	* Team ID:		4438
-	* Author List:	Aayushi Gautam, Dikshita Jain, Kanuj Das Gupta, Mohit Soni
+	* Author List:		Aayushi Gautam, Dikshita Jain, Kanuj Das Gupta, Mohit Soni
 	* FileName:		beacon_detector.py
 	* Theme:		Survey And Rescue
-	* Functions:	loadrois(), image_callback(), serviced_callback(), detect_colour_contour_centers() 
+	* Functions:		loadrois(), image_callback(), serviced_callback(), detect_colour_contour_centers() 
 '''
 
 #============================================================================================================
@@ -35,20 +35,19 @@ class sr_determine_colors():
 		self.bridge = CvBridge()
 		self.detect_pub = rospy.Publisher("/detection_info",SRInfo,queue_size=10) 
  		self.image_sub = rospy.Subscriber("/usb_cam/image_rect_color",Image,self.image_callback)
- 		#self.serviced_sub = rospy.Subscriber('/serviced_info',SRInfo,self.serviced_callback)
  		self.img=None
  		self.rect_list=None
- 		self.color_bound=np.array([[255,0,0],[0,255,0],[0,0,255]]) #Setting colour bound of BGR
- 		self.info=("MEDICINE","FOOD","RESCUE")	#defining meaning of each colour
- 		self.beacons={}
- 		self.time=time()
- 		rospy.sleep(0.5)
+ 		self.color_bound=np.array([[255,0,0],[0,255,0],[0,0,255]]) 	#Setting colour bound of BGR
+ 		self.info=("MEDICINE","FOOD","RESCUE")				#tuple of services
+ 		self.time=time()						#benchmark time
+ 		self.beacons={}							#beacon dict containing key as location and value as list[service,timestamp w.r.t benchmark time]
+ 		rospy.sleep(0.5)						#sleeping till beacons are all turned off by monitor
 
  #============================================================================================================
 	"""
 	* Function Name: load_rois
 	* Input: file path - rect_info.pkl
-	* Logic: Assigning rect list information of each roi from rect_info.pkl which is created by roi_detector.py
+	* Logic: Assigning rect_list from rect_info.pkl which was created by roi_detector.py
 	"""
 	def load_rois(self, file_path = '/home/asus/rect_info.pkl'):
 		try:
@@ -66,28 +65,31 @@ class sr_determine_colors():
  			print(e)
 
 #==============================================================================================================
-	
-	def detect_color_contour_centers(self, color_str):
-		#thresholding self.img and assign it to img_copy
+	'''
+	Function name:	detect_color_contour_centers
+	Logic:  -threshold the raw image
+		-itering through all the cell mentioned in rect_list
+		-masking the cell image by range from color_bound for all BGR
+		-now checking the number of white pixels in the masked cell image either in B,G or R if it exceeds a certain threshold.
+		-if found then assigned to beacons the location as key and service type and timestamp as values
+		-if for a cell from beacons timeout exceeds we assign- off and timestamp none
+		-publish to detection_info
+	'''
+	def detect_color_contour_centers(self):
 		img_copy=cv2.threshold(self.img, 200, 255, cv2.THRESH_BINARY)[1]  
 		k=0
 		for i in self.rect_list:
 			for j in i:
-				#assigning the roi by slicing the threshold image
 				cell=img_copy[ j[1]:j[1]+j[3] ,j[0]:j[0]+j[2] ]	
-				location=chr(k%6+65)+str(k/6+1)  #setting location as A1,A2 etc.
-				
-				#switching off the beacon to avoid redundancy
+				location=chr(k%6+65)+str(k/6+1)
 				if self.beacons.get(location) :
 					if (self.beacons.get(location)[0]=="RESCUE" and (time()-self.time-self.beacons.get(location)[1])>=10.5) or (self.beacons.get(location)[0] in ["FOOD","MEDICINE"] and (time()-self.time-self.beacons.get(location)[1])>=30.5):
 						self.beacons[location][0]="OFF"
 						self.beacons[location][1]=None
 
 				for l in range(0,3):
-					#returns a mask, specifying which pixels fall into  specified upper and lower range
 					mask=cv2.inRange(cell,self.color_bound[l],self.color_bound[l])
 					if np.sum(mask==255)>100:
-						#Publishing the location and info of the corresponding color detected
 						try:
 					     		if  self.beacons[location]!=self.info[l]:
 								self.detect_info_msg.location=location
@@ -116,7 +118,7 @@ def main(args):
 		cv2.destroyAllWindows()
 	while not rospy.is_shutdown():
 		try:
-			s.detect_color_contour_centers(None)
+			s.detect_color_contour_centers()
 			rate.sleep()
 		except KeyboardInterrupt:
 			cv2.destroyAllWindows()
