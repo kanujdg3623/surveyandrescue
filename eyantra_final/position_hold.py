@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 	* Team ID:		4438
 	* Author List:	Aayushi Gautam, Dikshita Jain, Kanuj Das Gupta, Mohit Soni
@@ -5,7 +6,7 @@
 	* Theme:		Survey And Rescue
 	* Functions:	getKey(), disarm(), arm(), land(), whycon_callback(), decision_callback(), pid()
 '''
-#!/usr/bin/env python
+
 from edrone_client.msg import *
 from geometry_msgs.msg import PoseArray
 from std_msgs.msg import Int16
@@ -95,11 +96,11 @@ class Edrone():
 
 #================================================================================================================
 
-"""
+	"""
 	* Function Name: disarm(), arm(), land()
 	* Input: Reference to the object of class edrone
 	* Logic: Setting the values of roll, pitch, throttle in order to arm, disarm and land the drone.
-"""
+	"""
 	def disarm(self):
 		self.cmd.rcRoll = 1500
 		self.cmd.rcYaw = 1500
@@ -129,20 +130,20 @@ class Edrone():
 		rospy.sleep(1)
 
 #================================================================================================================
-"""
+	"""
 	* Function Name: whycon_callback()
 	* Input: ros msg
 	* Logic: Set the drone position using ros msgs
-"""
+	"""
 	def whycon_callback(self,msg):
 		self.drone_position = msg.poses[0].position.x, msg.poses[0].position.y, msg.poses[0].position.z
 		
 #================================================================================================================
-"""
+	"""
 	* Function Name: decision_callback
 	* Input: ros msg
 	* Logic: Search the value of msg.location in cell_coords.json file and assign it as a set point.
-"""
+	"""
 	def decision_callback(self,msg):
 		self.out=[0,0,0]
 		self.Iterm1=[0,0,0]
@@ -151,7 +152,7 @@ class Edrone():
 
 #================================================================================================================
 
-'''
+	'''
 	* Function Name: pid()
 	* Input: reference to the object of class edrone
 	* Logic: consists of steps mentioned below
@@ -163,7 +164,7 @@ class Edrone():
 		6. Limit the output value and the final command value between the maximum(2000) and minimum(1000)range before publishing. 
 		7. Update previous errors.
 		8. When the error is changing from positive to negative or vice-versa make Iterm=0.
-'''
+	'''
 
 
 	def pid(self):
@@ -211,3 +212,5 @@ if __name__ == '__main__':
 	e_drone.land()
 	e_drone.disarm()
 	termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+
+

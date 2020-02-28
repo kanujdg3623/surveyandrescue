@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 	* Team ID:		4438
 	* Author List:	Aayushi Gautam, Dikshita Jain, Kanuj Das Gupta, Mohit Soni
@@ -5,9 +7,8 @@
 	* Theme:		Survey And Rescue
 	* Functions:	loadrois(), image_callback(), serviced_callback(), detect_colour_contour_centers() 
 '''
-#============================================================================================================
 
-#!/usr/bin/env python
+#============================================================================================================
 from __future__ import print_function
 import roslib
 import sys
@@ -23,6 +24,7 @@ import pickle
 import imutils
 import copy
 import os
+from time import time
 
 #============================================================================================================
 
@@ -40,15 +42,15 @@ class sr_determine_colors():
  		self.info=("MEDICINE","FOOD","RESCUE")	#defining meaning of each colour
  		self.beacons={}
  		self.time=time()
- 		rospy.sleep(2)
+ 		rospy.sleep(0.5)
 
  #============================================================================================================
-"""
+	"""
 	* Function Name: load_rois
 	* Input: file path - rect_info.pkl
 	* Logic: Assigning rect list information of each roi from rect_info.pkl which is created by roi_detector.py
-"""
-	def load_rois(self, file_path = '/home/aayushi/rect_info.pkl'):
+	"""
+	def load_rois(self, file_path = '/home/asus/rect_info.pkl'):
 		try:
 			with open(file_path, 'rb') as input:
    				self.rect_list = pickle.load(input)
@@ -87,7 +89,7 @@ class sr_determine_colors():
 					if np.sum(mask==255)>100:
 						#Publishing the location and info of the corresponding color detected
 						try:
-					     	if  self.beacons[location]!=self.info[l]:
+					     		if  self.beacons[location]!=self.info[l]:
 								self.detect_info_msg.location=location
 								self.detect_info_msg.info=self.info[l]
 								self.detect_pub.publish(self.detect_info_msg)
@@ -121,3 +123,5 @@ def main(args):
 
 if __name__ == '__main__':
     main(sys.argv)
+
+

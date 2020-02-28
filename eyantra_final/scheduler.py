@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 	* Team ID     :		4438
 	* Author List : 	Aayushi Gautam, Dikshita Jain, Kanuj Das Gupta, Mohit Soni
@@ -5,7 +6,6 @@
 	* Theme       :		Survey And Rescue
 	* Functions   :		detection_callback(), alt_error_callback(), pitch_error_callback(), roll_error_callback(), serviced_callback(), stats_callback(), main()
 '''
-#!/usr/bin/env python
 from __future__ import print_function
 import roslib
 import sys
@@ -62,11 +62,11 @@ class sr_scheduler():
 
 #=========================================================================================================================================================================================================
 
-'''
+	'''
 	*Function Name   :		detection_callback
 	*Input           :		self-> reference to the object of class sr_scheduler, msg-> msg of type SRInfo
 	*Logic           :		updates self.beacons upon led detection and sets self.stat to True		
-'''
+	'''
 		
 	def detection_callback(self, msg):
 		self.beacons[msg.location]=[msg.info,time()-self.time]
@@ -74,11 +74,11 @@ class sr_scheduler():
 
 #=========================================================================================================================================================================================================
 
-'''
+	'''
 	*Function Name   :		alt_error_callback, pitch_error_callback, roll_error_callback
 	*Input           :		self-> reference to the object of class sr_scheduler, msg-> msg of type Float64
 	*Logic           :		sets altitute, pitch and roll error accordingly in self.error		
-'''
+	'''
 
 	def alt_error_callback(self,msg):
 		self.error[2]=msg.data
@@ -91,11 +91,11 @@ class sr_scheduler():
 
 #=========================================================================================================================================================================================================
 
-'''
+	'''
 	*Function Name   :		serviced_callback
 	*Input           :		self-> reference to the object of class sr_scheduler, msg-> msg of type SRInfo 
 	*Logic           :		looks over few conditions after the msg is being serviced 		
-'''
+	'''
 
 	def serviced_callback(self,msg):
 		if msg.location!='E4':							        #update self.beacons[location] -> info to "OFF"  and error to "None" after it is serviced except "E4"
@@ -118,16 +118,11 @@ class sr_scheduler():
 
 #=========================================================================================================================================================================================================
 
-	def shutdown_hook(self):
-		pass
-
-#=========================================================================================================================================================================================================
-
-'''
+	'''
 	*Function Name   :		stats_callback
 	*Input           :		self-> reference to the object of class sr_scheduler, msg-> msg of type SRDroneStats 
 	*Logic           :		sets self.food & self.medicine		
-'''
+	'''
 
 	def stats_callback(self,msg):
 		self.food=msg.foodOnboard
@@ -135,14 +130,15 @@ class sr_scheduler():
 
 #=========================================================================================================================================================================================================
 
-'''
+	'''
 	*Function Name   :		main
 	*Input           :		args-> sys.argv 
 	*Logic           :		algorithm for drone to service under provided configuration		
-'''
+	'''
 					
 def main(args):
-	sched = sr_scheduler()	
+	sched = sr_scheduler()
+	rospy.init_node('sr_scheduler', anonymous=False)				
 	rate = rospy.Rate(20)                                                           #specifies rate in Hz
 	while not sched.stat:   						  	#loops until no led is lit	
 		pass
@@ -158,35 +154,26 @@ def main(args):
 			timespent=(time()-sched.time-info[1])				#calculate time of how long led is being glowing
 			dist=math.sqrt( (cur_row-row)**2 + (cur_col-col)**2 )		#calculate distance between current cell and cell which might be published
 
-'''			
-			if timespent exceeds 26 there is no need to publish as we need to service over food for 3 sec
+			'''
+			for food & medicine			
+			if timespent exceeds 26 there is no need to publish as we need to service for 3 sec
+			for rescue
+			if timespent exceeds 4 there is no need to publish as we need to service for 5 sec
 			comparing the priority to get maximum one
 			assign decided msg details
 			set priority
-'''
+			'''
 			
 			if info[0]=="FOOD" and timespent<=26:				
 				if priority < (10 * sched.food / dist):			
 					sched.decided_msg.location=location		
 					sched.decided_msg.info=info[0]
-					priority=10 * sched.food / dist               \
-'''
-			if timespent exceeds 26 there is no need to publish as we need to service over food for 3 sec
-			comparing the priority to get maximum one
-			assign decided msg details
-			set priority
-'''																	
+					priority=10 * sched.food / dist 
 			elif info[0]=="MEDICINE" and timespent<=26:
 				if priority < (10 * sched.medicine / dist):
 					sched.decided_msg.location=location
 					sched.decided_msg.info=info[0]
-					priority=10 * sched.medicine / dist           \
-'''
-			if timespent exceeds 4 there is no need to publish as we need to service over food for 5 sec
-			comparing the priority to get maximum one
-			assign decided msg details
-			set priority
-'''				
+					priority=10 * sched.medicine / dist           
 			elif info[0]=="RESCUE" and timespent<=4:
 				if priority < (50 / dist):
 					sched.decided_msg.location=location
@@ -196,7 +183,7 @@ def main(args):
 			sched.decided_msg.location="E4"
 			sched.decided_msg.info="BASE"
 
-'''
+		'''
 		there are 3 conditions combined in next if statement(here self.timer comes in use and it is incremented in line 223):
 			1. if servicing in false, therefore we need to publish decided msg
 			2. if rescue comes in between 
@@ -208,7 +195,7 @@ def main(args):
 				ii.  we didn't had rescue,therefore it is not must to service base
 				iii. decided msg info is not base
 				iv.  if drone has spent less than 2.5 sec on base 	
-'''
+		'''
 			
 		if not sched.servicing or (sched.decided_msg.info=="RESCUE" and sched.decided_msg_pub.info in ["FOOD","MEDICINE"] and sched.timer<=1.5) or (sched.decided_msg_pub.info=="BASE" and not sched.rescue and sched.decided_msg.info!="BASE" and sched.timer<=2.5) :							
    			sched.decision_pub.publish(sched.decided_msg)
